@@ -71,6 +71,38 @@ export function presetSliceToCliInput(
   };
 }
 
+/** Export mesh geometry from a 3MF using `--export-stl` (one merged mesh) or `--export-stls` (one file per object). */
+export function extractModelsFrom3mfToCliInput(
+  args:
+    | {
+        mode: "merged_single_stl";
+        three_mf_file: string;
+        plate_index: number;
+        output_dir?: string;
+        debug?: number;
+      }
+    | {
+        mode: "per_object_stls";
+        three_mf_file: string;
+        stls_directory: string;
+        plate_index: number;
+        output_dir?: string;
+        debug?: number;
+      }
+): SliceCliInput {
+  const input_files = [args.three_mf_file];
+  const base: SliceCliInput = {
+    plate_index: args.plate_index,
+    input_files,
+    output_dir: args.output_dir,
+    debug: args.debug,
+  };
+  if (args.mode === "merged_single_stl") {
+    return { ...base, export_stl: true };
+  }
+  return { ...base, export_stls: args.stls_directory };
+}
+
 /** Slice and write auxiliary artifacts (output dir, settings JSON, slicedata, STLs, PNG, etc.). */
 export function pipelineOutputsSliceToCliInput(args: {
   plate_index: number;

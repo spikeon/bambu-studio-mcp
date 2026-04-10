@@ -6,6 +6,7 @@ import path from "node:path";
 import { z } from "zod";
 import { runSliceFromInput } from "./slice-runner.js";
 import {
+  extractModelsFrom3mfToCliInput,
   fullSliceToolToCliInput,
   layoutSliceToCliInput,
   pipelineOutputsSliceToCliInput,
@@ -40,7 +41,7 @@ Settings priority (high to low): CLI --key=value, --load-settings/--load-filamen
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.
 
-Slice workflows (one tool each): bambu_studio_quick_slice → 3MF; bambu_studio_slice_with_layout (place/rotate); bambu_studio_slice_with_presets (JSON profiles); bambu_studio_slice_write_outputs (settings/slicedata/STL/PNG); bambu_studio_slice_all_cli_options (uncommon flags).`;
+Slice workflows (one tool each): bambu_studio_extract_models_from_3mf (STL geometry from a 3MF); bambu_studio_quick_slice → 3MF; bambu_studio_slice_with_layout; bambu_studio_slice_with_presets; bambu_studio_slice_write_outputs; bambu_studio_slice_all_cli_options.`;
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -111,6 +112,43 @@ const quickSliceSchema = {
   setting_overrides: settingOverridesField,
   uptodate: z.boolean().optional().describe("Refresh 3MF preset values to latest (--uptodate)"),
 };
+
+const threeMfFileField = z
+  .string()
+  .min(1)
+  .describe("Path to the .3mf project file relative to workspace");
+
+/** Export meshes from a 3MF to STL via --export-stl or --export-stls (runs slice for the chosen plate). */
+const extractModelsFrom3mfSchema = z.discriminatedUnion("mode", [
+  z.object({
+    workspace_path: workspaceField,
+    mode: z.literal("merged_single_stl"),
+    three_mf_file: threeMfFileField,
+    plate_index: plateIndexField,
+    output_dir: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Optional --outputdir; merged STL is written under this folder when set"),
+    debug: z.number().int().min(0).max(5).optional(),
+  }),
+  z.object({
+    workspace_path: workspaceField,
+    mode: z.literal("per_object_stls"),
+    three_mf_file: threeMfFileField,
+    plate_index: plateIndexField,
+    stls_directory: z
+      .string()
+      .min(1)
+      .describe("Relative directory for --export-stls (one STL per object); create it if missing"),
+    output_dir: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Optional --outputdir; if set, stls_directory is usually under this folder"),
+    debug: z.number().int().min(0).max(5).optional(),
+  }),
+]);
 
 const layoutSchemaFields = {
   arrange: z
@@ -250,7 +288,7 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Slice workflows (pick one): bambu_studio_quick_slice (3MF only) · bambu_studio_slice_with_layout · bambu_studio_slice_with_presets · bambu_studio_slice_write_outputs (settings/slicedata/STL/PNG) · bambu_studio_slice_all_cli_options (rare flags). For the exact upstream flag list, call bambu_studio_help.
+Workflows: bambu_studio_extract_models_from_3mf (3MF → STL) · bambu_studio_quick_slice (→ 3MF) · bambu_studio_slice_with_layout · bambu_studio_slice_with_presets · bambu_studio_slice_write_outputs · bambu_studio_slice_all_cli_options. For upstream flags, call bambu_studio_help.
 
 IMPORTANT — workspace_path format:
 This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
@@ -310,6 +348,19 @@ server.registerTool(
       content: [{ type: "text", text: formatToolOutput(result) }],
       isError: result.code !== 0,
     };
+  }
+);
+
+server.registerTool(
+  "bambu_studio_extract_models_from_3mf",
+  {
+    description:
+      "Workflow: pull mesh geometry out of a .3mf and write STL—either one merged file (--export-stl) or one STL per object in a folder (--export-stls). Uses the same plate index as slicing (0 = all plates). Prefer this over generic slice tools when you only need STLs.",
+    inputSchema: extractModelsFrom3mfSchema,
+  },
+  async (args) => {
+    const { workspace_path, ...rest } = args;
+    return runSliceFromInput(workspace_path, extractModelsFrom3mfToCliInput(rest));
   }
 );
 

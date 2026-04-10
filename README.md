@@ -66,6 +66,7 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 | `bambu_studio_cli_reference` | Short summary; use `bambu_studio_help` for the exact flags from your build |
 | `bambu_studio_help` | Runs `bambu-studio --help` in Docker or natively |
 | `bambu_studio_model_info` | Runs `--info` on workspace-relative models |
+| `bambu_studio_extract_models_from_3mf` | Workflow: **3MF → STL** (one merged mesh or one STL per object in a folder) |
 | `bambu_studio_quick_slice` | Workflow: slice → one output **3MF** |
 | `bambu_studio_slice_with_layout` | Workflow: orient / arrange / scale / rotate / … then slice → **3MF** |
 | `bambu_studio_slice_with_presets` | Workflow: `--load-settings` / `--load-filaments` then slice → **3MF** |

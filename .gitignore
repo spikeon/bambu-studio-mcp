@@ -5,3 +5,6 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Generated slice / export outputs from local test or MCP runs (not golden inputs)
+test/fixtures/output/

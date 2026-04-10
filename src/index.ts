@@ -4,8 +4,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
-import type { SliceCliInput } from "./slice-args.js";
 import { runSliceFromInput } from "./slice-runner.js";
+import {
+  fullSliceToolToCliInput,
+  layoutSliceToCliInput,
+  pipelineOutputsSliceToCliInput,
+  presetSliceToCliInput,
+  quickSliceToCliInput,
+} from "./workflow-slice.js";
 import {
   detectExecMode,
   formatToolOutput,
@@ -34,7 +40,7 @@ Settings priority (high to low): CLI --key=value, --load-settings/--load-filamen
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.
 
-Slice workflows: bambu_studio_slice (minimal), bambu_studio_slice_layout, bambu_studio_slice_load_presets, bambu_studio_slice_outputs, bambu_studio_slice_full (every surfaced CLI option in one call).`;
+Slice workflows (one tool each): bambu_studio_quick_slice → 3MF; bambu_studio_slice_with_layout (place/rotate); bambu_studio_slice_with_presets (JSON profiles); bambu_studio_slice_write_outputs (settings/slicedata/STL/PNG); bambu_studio_slice_all_cli_options (uncommon flags).`;
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -92,19 +98,18 @@ const exportMediaSchemaFields = {
     .describe("Camera angle for PNG export: 0–3, 10–12 (see --camera-view in --help)"),
 };
 
-const sliceBaseSchema = {
+/** Workflow: slice → one 3MF (no STL/PNG here; use slice_write_outputs). */
+const quickSliceSchema = {
   workspace_path: workspaceField,
   input_files: inputFilesField,
   plate_index: plateIndexField,
   export_3mf: z
     .string()
     .min(1)
-    .optional()
-    .describe("Relative path for --export-3mf output"),
+    .describe("Where to write the sliced 3MF (relative to workspace)"),
   debug: z.number().int().min(0).max(5).optional(),
   setting_overrides: settingOverridesField,
   uptodate: z.boolean().optional().describe("Refresh 3MF preset values to latest (--uptodate)"),
-  ...exportMediaSchemaFields,
 };
 
 const layoutSchemaFields = {
@@ -198,10 +203,44 @@ const outputSchemaFields = {
     .describe("Relative directory for --load-slicedata"),
 };
 
-function toSliceCliInput(args: { workspace_path: string } & Record<string, unknown>): SliceCliInput {
-  const { workspace_path: _wp, ...rest } = args;
-  return rest as unknown as SliceCliInput;
-}
+const layoutWorkflowSchema = { ...quickSliceSchema, ...layoutSchemaFields };
+
+const presetWorkflowSchema = { ...quickSliceSchema, ...presetSchemaFields };
+
+const pipelineWorkflowSchema = {
+  workspace_path: workspaceField,
+  input_files: inputFilesField,
+  plate_index: plateIndexField,
+  export_3mf: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Optional sliced 3MF output (relative to workspace)"),
+  debug: z.number().int().min(0).max(5).optional(),
+  setting_overrides: settingOverridesField,
+  uptodate: z.boolean().optional(),
+  ...outputSchemaFields,
+  ...exportMediaSchemaFields,
+};
+
+const allCliOptionsWorkflowSchema = {
+  workspace_path: workspaceField,
+  input_files: inputFilesField,
+  plate_index: plateIndexField,
+  export_3mf: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Output 3MF path when needed"),
+  debug: z.number().int().min(0).max(5).optional(),
+  setting_overrides: settingOverridesField,
+  uptodate: z.boolean().optional(),
+  ...layoutSchemaFields,
+  ...presetSchemaFields,
+  ...outputSchemaFields,
+  ...exportMediaSchemaFields,
+  ...advancedSliceSchemaFields,
+};
 
 const server = new McpServer(
   {
@@ -211,7 +250,7 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Slice tools: bambu_studio_slice (minimal + STL/PNG export flags), bambu_studio_slice_layout (placement/rotation/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (output dirs, settings, slicedata, STL/PNG), bambu_studio_slice_full (every CLI flag exposed by this server).
+Slice workflows (pick one): bambu_studio_quick_slice (3MF only) · bambu_studio_slice_with_layout · bambu_studio_slice_with_presets · bambu_studio_slice_write_outputs (settings/slicedata/STL/PNG) · bambu_studio_slice_all_cli_options (rare flags). For the exact upstream flag list, call bambu_studio_help.
 
 IMPORTANT — workspace_path format:
 This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
@@ -275,59 +314,65 @@ server.registerTool(
 );
 
 server.registerTool(
-  "bambu_studio_slice",
+  "bambu_studio_quick_slice",
   {
     description:
-      "Minimal slice: --slice plus optional --export-3mf, --export-stl, --export-stls (directory), --export-png, --camera-view, --debug, --uptodate, and print-setting overrides. For layout, presets, or the rest of the CLI surface use the other bambu_studio_slice_* tools or bambu_studio_slice_full.",
-    inputSchema: sliceBaseSchema,
+      "Workflow: slice the project and write one output 3MF. For STL/PNG/settings exports use bambu_studio_slice_write_outputs; for orient/arrange use bambu_studio_slice_with_layout.",
+    inputSchema: quickSliceSchema,
   },
-  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
+  async (args) => {
+    const { workspace_path, ...rest } = args;
+    return runSliceFromInput(workspace_path, quickSliceToCliInput(rest));
+  }
 );
 
 server.registerTool(
-  "bambu_studio_slice_layout",
+  "bambu_studio_slice_with_layout",
   {
     description:
-      "Slice with placement: --orient, --arrange, --scale, --rotate / --rotate-x / --rotate-y, --repetitions, --assemble, --convert-unit, --ensure-on-bed (plus base export flags).",
-    inputSchema: { ...sliceBaseSchema, ...layoutSchemaFields },
+      "Workflow: place parts on the bed (orient, arrange, scale, rotate, …) then slice to a 3MF. Same output contract as quick_slice.",
+    inputSchema: layoutWorkflowSchema,
   },
-  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
+  async (args) => {
+    const { workspace_path, ...rest } = args;
+    return runSliceFromInput(workspace_path, layoutSliceToCliInput(rest));
+  }
 );
 
 server.registerTool(
-  "bambu_studio_slice_load_presets",
+  "bambu_studio_slice_with_presets",
   {
     description:
-      "Slice while loading full machine/process JSON and optional --load-filaments preset list (semicolon pattern). Common for STL or overriding 3MF printer/print/filament settings.",
-    inputSchema: { ...sliceBaseSchema, ...presetSchemaFields },
+      "Workflow: load machine/process/filament JSON presets, then slice to a 3MF. Use when the project needs external profile files.",
+    inputSchema: presetWorkflowSchema,
   },
-  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
+  async (args) => {
+    const { workspace_path, ...rest } = args;
+    return runSliceFromInput(workspace_path, presetSliceToCliInput(rest));
+  }
 );
 
 server.registerTool(
-  "bambu_studio_slice_outputs",
+  "bambu_studio_slice_write_outputs",
   {
     description:
-      "Slice with paths: --outputdir, --export-settings, --export-slicedata, --load-slicedata, --export-stl, --export-stls, --export-png. If you set output_dir and export_3mf (or export_stls), use paths under that directory so the server can pass relative names and avoid upstream path doubling.",
-    inputSchema: { ...sliceBaseSchema, ...outputSchemaFields },
+      "Workflow: slice and write auxiliary files—output directory, exported settings JSON, slicedata cache, load cached slicedata, merged STL, per-object STLs, plate PNG, camera view. Optional sliced 3MF. If you set output_dir, keep export_3mf/export_stls paths under it so paths do not double.",
+    inputSchema: pipelineWorkflowSchema,
   },
-  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
+  async (args) => {
+    const { workspace_path, ...rest } = args;
+    return runSliceFromInput(workspace_path, pipelineOutputsSliceToCliInput(rest));
+  }
 );
 
 server.registerTool(
-  "bambu_studio_slice_full",
+  "bambu_studio_slice_all_cli_options",
   {
     description:
-      "Single invocation with every CLI option this server exposes (same surface as bambu-studio --help). Prefer narrower tools when you do not need the full set.",
-    inputSchema: {
-      ...sliceBaseSchema,
-      ...layoutSchemaFields,
-      ...presetSchemaFields,
-      ...outputSchemaFields,
-      ...advancedSliceSchemaFields,
-    },
+      "Workflow: one call with every optional CLI flag this server supports (clone objects, makerlab, skips, limits, …). Prefer the narrower workflow tools when possible.",
+    inputSchema: allCliOptionsWorkflowSchema,
   },
-  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
+  async (args) => runSliceFromInput(args.workspace_path, fullSliceToolToCliInput(args))
 );
 
 server.registerTool(

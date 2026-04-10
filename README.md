@@ -66,11 +66,11 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 | `bambu_studio_cli_reference` | Short summary; use `bambu_studio_help` for the exact flags from your build |
 | `bambu_studio_help` | Runs `bambu-studio --help` in Docker or natively |
 | `bambu_studio_model_info` | Runs `--info` on workspace-relative models |
-| `bambu_studio_slice` | Minimal slice: `--slice`, optional `--export-3mf`, `--export-stl`, `--export-stls`, `--export-png`, `--debug`, `--uptodate`, `setting_overrides` |
-| `bambu_studio_slice_layout` | Placement: `--orient`, `--arrange`, `--scale`, `--rotate` / `--rotate-x` / `--rotate-y`, `--repetitions`, `--assemble`, etc. |
-| `bambu_studio_slice_load_presets` | `--load-settings` and optional `--load-filaments` |
-| `bambu_studio_slice_outputs` | Paths: `--outputdir`, `--export-settings`, `--export-slicedata`, `--load-slicedata`, STL/PNG exports |
-| `bambu_studio_slice_full` | Every `bambu-studio` CLI flag exposed by this server (matches `--help` for the bundled version) |
+| `bambu_studio_quick_slice` | Workflow: slice → one output **3MF** |
+| `bambu_studio_slice_with_layout` | Workflow: orient / arrange / scale / rotate / … then slice → **3MF** |
+| `bambu_studio_slice_with_presets` | Workflow: `--load-settings` / `--load-filaments` then slice → **3MF** |
+| `bambu_studio_slice_write_outputs` | Workflow: slice plus **settings JSON**, **slicedata**, **STL(s)**, **PNG**, optional **3MF** |
+| `bambu_studio_slice_all_cli_options` | Workflow: all other CLI flags (skips, makerlab, limits, …) in one call |
 | `bambu_studio_health` | Reports exec mode and whether `--help` succeeds |
 
 ## Development (from source)

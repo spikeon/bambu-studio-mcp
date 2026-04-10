@@ -6,6 +6,16 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server that runs th
 
 CLI reference: [Bambu Studio — Command Line Usage](https://github.com/bambulab/BambuStudio/wiki/Command-Line-Usage).
 
+### Tools vs skills vs Cursor plugins
+
+| Layer | What it is |
+|-------|------------|
+| **MCP tool** | A callable entry point implemented in **this server** (e.g. `bambu_studio_extract_stls_beside_3mf`). It runs Docker/native `bambu-studio` and MCP-side file logic. |
+| **Agent skill** | A `SKILL.md` file that teaches assistants *when* and *how* to use tools. It does not execute slicing by itself. |
+| **Cursor plugin** | The supported **distribution** format for skills (and optional MCP wiring): a directory with `.cursor-plugin/plugin.json`, plus `skills/`, and optionally `mcp.json`. See [Cursor Plugins](https://cursor.com/docs/plugins.md). |
+
+The “prefixed STLs beside `.3mf`” workflow is distributed as a **plugin** at [`plugins/bambu-prefixed-stl-extract/`](plugins/bambu-prefixed-stl-extract/README.md) (skill + default `mcp.json`). Install it from a clone via `~/.cursor/plugins/local/` or publish the repo to the Cursor Marketplace / a team marketplace.
+
 ## Quick start
 
 **Requirements:** [Docker](https://docs.docker.com/get-docker/) running (Docker Desktop is fine). That is the only setup.

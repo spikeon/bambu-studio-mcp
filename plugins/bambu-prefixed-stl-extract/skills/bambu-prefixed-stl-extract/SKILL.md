@@ -8,6 +8,10 @@ description: >-
 
 # Prefixed STLs beside `.3mf` (bambu-studio MCP)
 
+## Requirements
+
+This skill assumes the **bambu-studio** MCP server is enabled (this plugin ships `mcp.json` so Cursor can load it). The server image must include tool **`bambu_studio_extract_stls_beside_3mf`** (e.g. `ghcr.io/spikeon/bambu-studio-mcp:mcp`).
+
 ## When to use
 
 - The user asks to pull mesh STLs out of a Bambu `.3mf` and place them **in the same folder** as that file.

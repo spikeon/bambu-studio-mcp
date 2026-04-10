@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "bambu-studio": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "ghcr.io/spikeon/bambu-studio-mcp:mcp"
+      ]
+    }
+  }
+}

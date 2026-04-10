@@ -1,0 +1,11 @@
+{
+  "name": "bambu-prefixed-stl-extract",
+  "version": "1.0.0",
+  "description": "Skill for exporting per-object STLs beside a .3mf via bambu-studio-mcp (includes MCP server wiring).",
+  "author": {
+    "name": "spikeon"
+  },
+  "repository": "https://github.com/spikeon/bambu-studio-mcp",
+  "license": "ISC",
+  "keywords": ["bambu", "bambu-studio", "3mf", "stl", "mcp", "3d-printing", "slicing"]
+}

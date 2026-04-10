@@ -91,7 +91,7 @@ npm run test:e2e # Docker E2E (needs Docker + image from BAMBU_E2E_IMAGE)
 npm run ci       # build + unit + E2E
 ```
 
-CI builds the slicer image, runs E2E, and (on `main`) publishes **`ghcr.io/<owner>/bambu-studio-mcp:latest`** and **`:mcp`** via [`.github/workflows/publish-ghcr.yml`](.github/workflows/publish-ghcr.yml).
+CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)) builds the slicer image, runs unit + E2E tests, and **only if those pass** on a push to `main`, publishes **`ghcr.io/<owner>/bambu-studio-mcp:latest`** and **`:mcp`**. Pull requests run the same tests but do not push images.
 
 E2E tests live in `test/e2e/*.e2e.test.ts` and download a small upstream 3MF (`BAMBU_STUDIO_FIXTURE_REF`, optional `BAMBU_E2E_FIXTURE_PATH`).
 

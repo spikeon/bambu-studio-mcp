@@ -18,30 +18,23 @@ const WIKI_CLI_URL =
 
 const CLI_REFERENCE = `Bambu Studio command-line usage (summary). Full manual: ${WIKI_CLI_URL}
 
+Run bambu_studio_help for the exact flag list from your installed build.
+
 Usage: bambu-studio [ OPTIONS ] [ file.3mf/file.stl ... ]
 
-Common OPTIONS:
-- --debug level — 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:trace
-- --load-filaments "a.json;;c.json" — semicolon list; empty slots keep 3MF filament
-- --load-settings "machine.json;process.json" — up to one machine + one process JSON
-- --outputdir dir — export directory
-- --arrange option — 0 disable, 1 enable, other values: auto
-- --orient option — 0 disable, 1 enable, other values: auto
-- --scale factor — float scale
-- --export-3mf file.3mf — write sliced project 3MF
-- --export-settings settings.json — dump settings
-- --export-slicedata dir — export slicing cache
-- --info — print model info
-- --load-slicedata dir — load slicing cache
-- --pipe pipename — progress pipe
-- --slice plate_index — 0 = all plates, i = plate i
-- --uptodate — refresh 3MF config presets to latest
+Representative OPTIONS (see --help for the complete set):
+- --debug, --load-settings, --load-filaments, --outputdir
+- --arrange, --orient, --scale, --rotate, --rotate-x, --rotate-y, --repetitions
+- --assemble, --convert-unit, --ensure-on-bed
+- --export-3mf, --export-settings, --export-slicedata, --export-png, --export-stl, --export-stls
+- --load-slicedata, --info, --pipe, --slice, --uptodate
+- Plus multicolor, skip, makerlab, metadata, downward-check, timelapse, limits (--mstpp, --mtcpp), etc.
 
 Settings priority (high to low): CLI --key=value, --load-settings/--load-filaments, values inside 3MF.
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.
 
-Slice workflows are split across several tools (basic slice, layout, presets, outputs, full). Use bambu_studio_slice_full when you need options from more than one category in a single run.`;
+Slice workflows: bambu_studio_slice (minimal), bambu_studio_slice_layout, bambu_studio_slice_load_presets, bambu_studio_slice_outputs, bambu_studio_slice_full (every surfaced CLI option in one call).`;
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -79,6 +72,26 @@ const settingOverridesField = z
   .optional()
   .describe('CLI overrides as --key=value (e.g. { "curr-bed-type": "Cool Plate" })');
 
+/** STL/PNG exports and camera (see --export-stl, --export-stls, --export-png, --camera-view). */
+const exportMediaSchemaFields = {
+  export_png: z
+    .number()
+    .int()
+    .optional()
+    .describe("Plate index for --export-png (0 = all plates; i = plate i)"),
+  export_stl: z.boolean().optional().describe("Set true for --export-stl (single merged STL)"),
+  export_stls: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Relative directory for --export-stls (one STL per object); create the dir if needed"),
+  camera_view: z
+    .number()
+    .int()
+    .optional()
+    .describe("Camera angle for PNG export: 0–3, 10–12 (see --camera-view in --help)"),
+};
+
 const sliceBaseSchema = {
   workspace_path: workspaceField,
   input_files: inputFilesField,
@@ -91,6 +104,7 @@ const sliceBaseSchema = {
   debug: z.number().int().min(0).max(5).optional(),
   setting_overrides: settingOverridesField,
   uptodate: z.boolean().optional().describe("Refresh 3MF preset values to latest (--uptodate)"),
+  ...exportMediaSchemaFields,
 };
 
 const layoutSchemaFields = {
@@ -103,6 +117,54 @@ const layoutSchemaFields = {
     .optional()
     .describe("0 off, 1 on, any other int = auto (upstream --orient)"),
   scale: z.number().optional().describe("Uniform scale factor before slicing"),
+  rotate: z.number().optional().describe("--rotate (degrees around Z)"),
+  rotate_x: z.number().optional().describe("--rotate-x"),
+  rotate_y: z.number().optional().describe("--rotate-y"),
+  repetitions: z.number().int().min(0).optional().describe("--repetitions"),
+  assemble: z.boolean().optional().describe("--assemble (merge loaded models for one operation)"),
+  convert_unit: z.boolean().optional().describe("--convert-unit"),
+  ensure_on_bed: z.number().int().optional().describe("--ensure-on-bed (option value, often 0/1)"),
+};
+
+/** Remaining CLI flags from bambu-studio --help (multicolor, skips, makerlab, limits, etc.). */
+const advancedSliceSchemaFields = {
+  allow_mix_temp: z.number().optional().describe("--allow-mix-temp"),
+  allow_multicolor_oneplate: z.boolean().optional().describe("--allow-multicolor-oneplate"),
+  allow_newer_file: z.number().optional().describe("--allow-newer-file"),
+  allow_rotations: z.boolean().optional().describe("--allow-rotations (during arrange)"),
+  avoid_extrusion_cali_region: z.boolean().optional().describe("--avoid-extrusion-cali-region"),
+  downward_check: z.boolean().optional().describe("--downward-check"),
+  downward_settings_semicolon: z
+    .string()
+    .optional()
+    .describe("--downward-settings (semicolon-separated JSON paths)"),
+  enable_timelapse: z.boolean().optional().describe("--enable-timelapse"),
+  load_assemble_list: z.string().min(1).optional().describe("--load-assemble-list"),
+  load_custom_gcodes: z.string().min(1).optional().describe("--load-custom-gcodes"),
+  load_filament_ids: z.string().optional().describe('--load-filament-ids e.g. "1,2,3,1"'),
+  clone_objects: z.string().optional().describe('--clone-objects e.g. "1,3,1,10"'),
+  makerlab_name: z.string().optional().describe("--makerlab-name"),
+  makerlab_version: z.string().optional().describe("--makerlab-version"),
+  metadata_name: z.string().optional().describe('--metadata-name (semicolon-separated)'),
+  metadata_value: z.string().optional().describe("--metadata-value"),
+  skip_modified_gcodes: z.number().optional().describe("--skip-modified-gcodes"),
+  skip_objects: z.string().optional().describe('--skip-objects e.g. "3,5,10,77"'),
+  skip_useless_pick: z.number().optional().describe("--skip-useless-pick"),
+  uptodate_filaments_semicolon: z
+    .string()
+    .optional()
+    .describe("--uptodate-filaments (semicolon paths, used with --uptodate)"),
+  uptodate_settings_semicolon: z
+    .string()
+    .optional()
+    .describe("--uptodate-settings (semicolon paths, used with --uptodate)"),
+  load_defaultfila: z.number().optional().describe("--load-defaultfila"),
+  min_save: z.number().optional().describe("--min-save"),
+  mstpp: z.number().optional().describe("--mstpp (max slice time per plate, seconds)"),
+  mtcpp: z.number().optional().describe("--mtcpp (max triangle count per plate)"),
+  no_check: z.boolean().optional().describe("--no-check"),
+  normative_check: z.number().optional().describe("--normative-check"),
+  pipe: z.string().min(1).optional().describe("--pipe progress pipe name"),
 };
 
 const presetSchemaFields = {
@@ -136,23 +198,9 @@ const outputSchemaFields = {
     .describe("Relative directory for --load-slicedata"),
 };
 
-function sliceInputBase(args: {
-  workspace_path: string;
-  input_files: string[];
-  plate_index: number;
-  export_3mf?: string;
-  debug?: number;
-  setting_overrides?: Record<string, string | number | boolean>;
-  uptodate?: boolean;
-}): SliceCliInput {
-  return {
-    plate_index: args.plate_index,
-    input_files: args.input_files,
-    export_3mf: args.export_3mf,
-    debug: args.debug,
-    setting_overrides: args.setting_overrides,
-    uptodate: args.uptodate,
-  };
+function toSliceCliInput(args: { workspace_path: string } & Record<string, unknown>): SliceCliInput {
+  const { workspace_path: _wp, ...rest } = args;
+  return rest as unknown as SliceCliInput;
 }
 
 const server = new McpServer(
@@ -163,7 +211,7 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Slice tools: bambu_studio_slice (minimal), bambu_studio_slice_layout (orient/arrange/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (export paths and cache dirs), bambu_studio_slice_full (all options in one call).
+Slice tools: bambu_studio_slice (minimal + STL/PNG export flags), bambu_studio_slice_layout (placement/rotation/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (output dirs, settings, slicedata, STL/PNG), bambu_studio_slice_full (every CLI flag exposed by this server).
 
 IMPORTANT — workspace_path format:
 This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
@@ -180,7 +228,7 @@ server.registerTool(
   "bambu_studio_cli_reference",
   {
     description:
-      "Static summary of Bambu Studio CLI flags and behavior (from the official wiki). Use before planning slice commands.",
+      "Short summary of Bambu Studio CLI; for the authoritative flag list from your slicer build, call bambu_studio_help.",
   },
   async () => ({
     content: [{ type: "text", text: CLI_REFERENCE }],
@@ -230,30 +278,20 @@ server.registerTool(
   "bambu_studio_slice",
   {
     description:
-      "Minimal slice: --slice only (plus optional --export-3mf, --debug, --uptodate, and CLI setting overrides). Use other bambu_studio_slice_* tools for layout, presets, or extra exports.",
+      "Minimal slice: --slice plus optional --export-3mf, --export-stl, --export-stls (directory), --export-png, --camera-view, --debug, --uptodate, and print-setting overrides. For layout, presets, or the rest of the CLI surface use the other bambu_studio_slice_* tools or bambu_studio_slice_full.",
     inputSchema: sliceBaseSchema,
   },
-  async (args) =>
-    runSliceFromInput(args.workspace_path, sliceInputBase(args))
+  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
 );
 
 server.registerTool(
   "bambu_studio_slice_layout",
   {
     description:
-      "Slice with model layout options: --orient, --arrange, and/or --scale before slicing (typical for raw STL workflows).",
+      "Slice with placement: --orient, --arrange, --scale, --rotate / --rotate-x / --rotate-y, --repetitions, --assemble, --convert-unit, --ensure-on-bed (plus base export flags).",
     inputSchema: { ...sliceBaseSchema, ...layoutSchemaFields },
   },
-  async (args) =>
-    runSliceFromInput(
-      args.workspace_path,
-      {
-        ...sliceInputBase(args),
-        orient: args.orient,
-        arrange: args.arrange,
-        scale: args.scale,
-      }
-    )
+  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
 );
 
 server.registerTool(
@@ -263,57 +301,33 @@ server.registerTool(
       "Slice while loading full machine/process JSON and optional --load-filaments preset list (semicolon pattern). Common for STL or overriding 3MF printer/print/filament settings.",
     inputSchema: { ...sliceBaseSchema, ...presetSchemaFields },
   },
-  async (args) =>
-    runSliceFromInput(
-      args.workspace_path,
-      {
-        ...sliceInputBase(args),
-        load_settings_files: args.load_settings_files,
-        load_filaments_semicolon: args.load_filaments_semicolon,
-      }
-    )
+  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
 );
 
 server.registerTool(
   "bambu_studio_slice_outputs",
   {
     description:
-      "Slice with output paths: --outputdir, --export-settings, --export-slicedata, and/or --load-slicedata. If you set output_dir and export_3mf, use a path for export_3mf under that directory (the server passes a relative name to the CLI so Bambu Studio does not double the folder).",
+      "Slice with paths: --outputdir, --export-settings, --export-slicedata, --load-slicedata, --export-stl, --export-stls, --export-png. If you set output_dir and export_3mf (or export_stls), use paths under that directory so the server can pass relative names and avoid upstream path doubling.",
     inputSchema: { ...sliceBaseSchema, ...outputSchemaFields },
   },
-  async (args) =>
-    runSliceFromInput(
-      args.workspace_path,
-      {
-        ...sliceInputBase(args),
-        output_dir: args.output_dir,
-        export_settings: args.export_settings,
-        export_slicedata: args.export_slicedata,
-        load_slicedata: args.load_slicedata,
-      }
-    )
+  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
 );
 
 server.registerTool(
   "bambu_studio_slice_full",
   {
     description:
-      "Single slice invocation with every supported option (layout, presets, outputs, overrides). Prefer the narrower slice tools when possible.",
-    inputSchema: { ...sliceBaseSchema, ...layoutSchemaFields, ...presetSchemaFields, ...outputSchemaFields },
+      "Single invocation with every CLI option this server exposes (same surface as bambu-studio --help). Prefer narrower tools when you do not need the full set.",
+    inputSchema: {
+      ...sliceBaseSchema,
+      ...layoutSchemaFields,
+      ...presetSchemaFields,
+      ...outputSchemaFields,
+      ...advancedSliceSchemaFields,
+    },
   },
-  async (args) =>
-    runSliceFromInput(args.workspace_path, {
-      ...sliceInputBase(args),
-      orient: args.orient,
-      arrange: args.arrange,
-      scale: args.scale,
-      load_settings_files: args.load_settings_files,
-      load_filaments_semicolon: args.load_filaments_semicolon,
-      output_dir: args.output_dir,
-      export_settings: args.export_settings,
-      export_slicedata: args.export_slicedata,
-      load_slicedata: args.load_slicedata,
-    })
+  async (args) => runSliceFromInput(args.workspace_path, toSliceCliInput(args))
 );
 
 server.registerTool(

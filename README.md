@@ -63,14 +63,14 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 
 | Tool | Purpose |
 |------|---------|
-| `bambu_studio_cli_reference` | Short summary of common CLI flags (from the wiki) |
+| `bambu_studio_cli_reference` | Short summary; use `bambu_studio_help` for the exact flags from your build |
 | `bambu_studio_help` | Runs `bambu-studio --help` in Docker or natively |
 | `bambu_studio_model_info` | Runs `--info` on workspace-relative models |
-| `bambu_studio_slice` | Minimal slice: `--slice`, optional `--export-3mf`, `--debug`, `--uptodate`, `setting_overrides` |
-| `bambu_studio_slice_layout` | Slice with `--orient` / `--arrange` (0/1/auto) and `--scale` |
-| `bambu_studio_slice_load_presets` | Slice with `--load-settings` and optional `--load-filaments` |
-| `bambu_studio_slice_outputs` | Slice with `--outputdir`, `--export-settings`, `--export-slicedata`, `--load-slicedata` |
-| `bambu_studio_slice_full` | One call with every slice-related option (use when combining categories) |
+| `bambu_studio_slice` | Minimal slice: `--slice`, optional `--export-3mf`, `--export-stl`, `--export-stls`, `--export-png`, `--debug`, `--uptodate`, `setting_overrides` |
+| `bambu_studio_slice_layout` | Placement: `--orient`, `--arrange`, `--scale`, `--rotate` / `--rotate-x` / `--rotate-y`, `--repetitions`, `--assemble`, etc. |
+| `bambu_studio_slice_load_presets` | `--load-settings` and optional `--load-filaments` |
+| `bambu_studio_slice_outputs` | Paths: `--outputdir`, `--export-settings`, `--export-slicedata`, `--load-slicedata`, STL/PNG exports |
+| `bambu_studio_slice_full` | Every `bambu-studio` CLI flag exposed by this server (matches `--help` for the bundled version) |
 | `bambu_studio_health` | Reports exec mode and whether `--help` succeeds |
 
 ## Development (from source)

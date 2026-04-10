@@ -122,6 +122,38 @@ describe("buildSliceCliArgs", () => {
     expect(argv[argv.indexOf("--outputdir") + 1]).toBe("/work/out/sub");
   });
 
+  it("emits --export-stl and maps --export-stls paths in docker mode", () => {
+    const argv = buildSliceCliArgs(
+      ws,
+      {
+        plate_index: 0,
+        input_files: ["m.3mf"],
+        export_stl: true,
+        export_stls: "out/stls",
+      },
+      "docker"
+    );
+    expect(argv).toContain("--export-stl");
+    const i = argv.indexOf("--export-stls");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(argv[i + 1]).toBe("/work/out/stls");
+  });
+
+  it("uses path under output_dir as relative --export-stls (same as export-3mf)", () => {
+    const argv = buildSliceCliArgs(
+      ws,
+      {
+        plate_index: 0,
+        input_files: ["p.3mf"],
+        output_dir: "out/sub",
+        export_stls: "out/sub/stl_dir",
+      },
+      "docker"
+    );
+    const i = argv.indexOf("--export-stls");
+    expect(argv[i + 1]).toBe("stl_dir");
+  });
+
   it("places setting_overrides before --debug", () => {
     const argv = buildSliceCliArgs(
       ws,

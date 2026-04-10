@@ -9,7 +9,7 @@
     "dev": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "bash test/integration/docker-e2e.sh",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "ci": "npm run build && npm run test && npm run test:e2e"
   },
   "keywords": [],

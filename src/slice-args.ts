@@ -88,7 +88,24 @@ export function buildSliceCliArgs(
   if (input.export_3mf) {
     assertRelativeWorkspacePath(input.export_3mf);
     resolveHostPath(ws, input.export_3mf);
-    cli.push("--export-3mf", mapFileArgs(ws, [input.export_3mf], mode)[0]!);
+    let exportArg: string;
+    if (input.output_dir) {
+      assertRelativeWorkspacePath(input.output_dir);
+      resolveHostPath(ws, input.output_dir);
+      const od = assertRelativeWorkspacePath(input.output_dir);
+      const ex = assertRelativeWorkspacePath(input.export_3mf);
+      if (ex.startsWith(`${od}/`)) {
+        exportArg = ex.slice(od.length + 1);
+      } else if (ex === od) {
+        throw new Error("export_3mf must be a file path, not the same as output_dir");
+      } else {
+        const parts = ex.split("/");
+        exportArg = parts[parts.length - 1] ?? ex;
+      }
+    } else {
+      exportArg = mapFileArgs(ws, [input.export_3mf], mode)[0]!;
+    }
+    cli.push("--export-3mf", exportArg);
   }
   if (input.export_settings) {
     assertRelativeWorkspacePath(input.export_settings);

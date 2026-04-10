@@ -29,8 +29,8 @@ jobs:
       - name: Build Bambu Studio Docker image
         run: docker build -t bambu-studio-mcp:ci .
 
-      - name: E2E — CLI slice, orient, arrange, scale, exports
+      - name: E2E (Vitest + Docker)
         env:
           BAMBU_E2E_IMAGE: bambu-studio-mcp:ci
           BAMBU_E2E_DOCKER_TIMEOUT: "900"
-        run: bash test/integration/docker-e2e.sh
+        run: npm run test:e2e

@@ -73,19 +73,19 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 npm run dev      # run server via tsx (stdio MCP)
 npm run build    # compile to dist/
 npm run test     # Vitest unit tests
-npm run test:e2e # Docker E2E (requires bash + Docker; use Git Bash/WSL on Windows)
+npm run test:e2e # Vitest Docker E2E (requires Docker + built image tag from BAMBU_E2E_IMAGE)
 npm run ci       # build + unit tests + E2E
 ```
 
 CI (GitHub Actions) builds the image and runs the same E2E script as `test:e2e`.
 
-E2E downloads a small upstream 3MF (default: `auto_pa_line_single.3mf` at `BAMBU_STUDIO_FIXTURE_REF`). Override with `BAMBU_E2E_FIXTURE_PATH` (repo-relative path under `BambuStudio`, e.g. `resources/calib/...`) if needed.
+E2E is implemented as **Vitest** tests in `test/e2e/*.e2e.test.ts` (nested `describe` / `it`, standard reporter). They download a small upstream 3MF (default: `auto_pa_line_single.3mf` at `BAMBU_STUDIO_FIXTURE_REF`). Override with `BAMBU_E2E_FIXTURE_PATH` (repo-relative path under `BambuStudio`) if needed.
 
 ## Docker image notes
 
 The [`Dockerfile`](Dockerfile) uses **Fedora** as the runtime base so shared libraries match the **Fedora** AppImage from upstream releases. The image downloads a pinned AppImage at build time (`BAMBU_APPIMAGE_URL` build-arg); override it if you need another version.
 
-The [`docker/entrypoint.sh`](docker/entrypoint.sh) defaults to **software OpenGL** (`LIBGL_ALWAYS_SOFTWARE`, `llvmpipe`) so headless slicing is stable in CI; unset or override those variables if you run the image with a real GPU.
+The [`docker/entrypoint.sh`](docker/entrypoint.sh) defaults to **software OpenGL** (`LIBGL_ALWAYS_SOFTWARE`, `llvmpipe`) so headless slicing is stable in CI, and forces **X11** (`GDK_BACKEND`, `XDG_RUNTIME_DIR`, no Wayland) so `--orient` / `--arrange` do not trip GLFW/Wayland under `xvfb-run`. Unset or override if you run the image with a real GPU/display.
 
 ## License
 

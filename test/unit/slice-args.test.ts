@@ -105,6 +105,23 @@ describe("buildSliceCliArgs", () => {
     expect(argv).toContain("--uptodate");
   });
 
+  it("uses path under output_dir as relative --export-3mf (avoids upstream path doubling)", () => {
+    const argv = buildSliceCliArgs(
+      ws,
+      {
+        plate_index: 0,
+        input_files: ["p.3mf"],
+        output_dir: "out/sub",
+        export_3mf: "out/sub/from_outputdir.3mf",
+      },
+      "docker"
+    );
+    const i = argv.indexOf("--export-3mf");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(argv[i + 1]).toBe("from_outputdir.3mf");
+    expect(argv[argv.indexOf("--outputdir") + 1]).toBe("/work/out/sub");
+  });
+
   it("places setting_overrides before --debug", () => {
     const argv = buildSliceCliArgs(
       ws,

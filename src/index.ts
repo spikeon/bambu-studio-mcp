@@ -265,7 +265,7 @@ server.registerTool(
   "bambu_studio_slice_outputs",
   {
     description:
-      "Slice with output paths: --outputdir, --export-settings, --export-slicedata, and/or --load-slicedata.",
+      "Slice with output paths: --outputdir, --export-settings, --export-slicedata, and/or --load-slicedata. If you set output_dir and export_3mf, use a path for export_3mf under that directory (the server passes a relative name to the CLI so Bambu Studio does not double the folder).",
     inputSchema: { ...sliceBaseSchema, ...outputSchemaFields },
   },
   async (args) =>

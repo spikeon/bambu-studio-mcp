@@ -2,6 +2,8 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that runs the [Bambu Studio](https://github.com/bambulab/BambuStudio) **command-line interface** so assistants can slice projects, inspect models, and read CLI help. The slicer runs in a **Docker** container by default (official Linux AppImage inside the image), so you do not need Bambu Studio installed on the host.
 
+**Scope:** Anything the upstream `bambu-studio` binary can do is still *that* program’s behavior. Features listed under [MCP-only behavior](#mcp-only-behavior-not-bambu-studio-cli) are implemented in **this Node server** (file renames, tree walks, Docker wiring, etc.) and are **not** part of Bambu Studio itself.
+
 CLI reference: [Bambu Studio — Command Line Usage](https://github.com/bambulab/BambuStudio/wiki/Command-Line-Usage).
 
 ## Quick start
@@ -75,9 +77,25 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 | `bambu_studio_slice_all_cli_options` | Workflow: all other CLI flags (skips, makerlab, limits, …) in one call |
 | `bambu_studio_health` | Reports exec mode and whether `--help` succeeds |
 
-## Catalog mesh standardization (`bambu_studio_standardize_catalog_meshes`)
+Anything that is **not** a capability of the `bambu-studio` executable itself is documented in the next section—not in Bambu Lab’s wiki.
 
-For consumer monorepos with a `models/` tree (paths like `Back/Generator/Part.3mf`), this tool runs **only through the MCP**—no per-repo scripts required.
+## MCP-only behavior (not Bambu Studio CLI)
+
+The upstream [`bambu-studio`](https://github.com/bambulab/BambuStudio) binary exposes flags such as `--slice`, `--export-stls`, `--info`, `--orient`, etc. **Everything in this section is extra behavior from the MCP server** (this repository): Node.js logic, Docker orchestration, or documentation helpers—not features you get by running Bambu Studio alone.
+
+**In this category:**
+
+- **`bambu_studio_standardize_catalog_meshes`** — Entire tool (see subsection below): directory walking, skip rules, brand-based `.3mf` renames, post-export `.stl` renames, temp dirs, JSON batch results. Bambu only writes whatever names it chooses to `--export-stls <dir>`; it does not implement catalog batching or custom basenames.
+- **Workspace / Docker path mapping** — Resolving a host workspace and bind-mounting it as `/work`, and the documented Linux-style absolute paths for MCP-on-Docker. Not a Bambu Studio feature.
+- **`--outputdir` + `--export-3mf` path handling** — The server adjusts relative paths so the CLI does not double folder segments in some combinations. Logic lives in this repo’s argument builder, not upstream.
+- **Workflow-oriented tool split** — Grouping CLI flags into `quick_slice`, `slice_with_layout`, `slice_write_outputs`, etc. is for MCP ergonomics; they still invoke the same CLI capabilities.
+- **`bambu_studio_cli_reference`** — Static markdown summary, not the binary.
+- **`bambu_studio_health`** — Checks how this MCP is configured (Docker vs native, image, `--help` exit code).
+- **MCP input schemas** — Zod/JSON Schema for tools (including union shapes so clients list all fields for `bambu_studio_extract_models_from_3mf`).
+
+### Catalog mesh standardization (`bambu_studio_standardize_catalog_meshes`)
+
+For consumer monorepos with a `models/` tree (paths like `Back/Generator/Part.3mf`), this tool runs **only in this MCP**—no per-repo scripts required. It **calls** Bambu with `--slice 0` and `--export-stls` to a temp directory; everything else below is **MCP-side** file and path logic.
 
 **Arguments**
 
@@ -91,7 +109,7 @@ For consumer monorepos with a `models/` tree (paths like `Back/Generator/Part.3m
 | `stl_output_subpath` | Optional subfolder **under each part directory** for final STLs (default: next to the `.3mf`). |
 | `debug` | Optional Bambu `--debug` level. |
 
-**`.3mf` naming (when `rename_three_mf` is true)**
+**`.3mf` naming (when `rename_three_mf` is true)** — **MCP only** (ordinary filesystem renames before invoking Bambu).
 
 - **One** `.3mf` in a folder: `{Brand} - {path under models with " - " instead of /}.3mf`  
   Example: `Back/Generator/foo.3mf` → `ExoGuitar - Back - Generator.3mf`.
@@ -99,9 +117,7 @@ For consumer monorepos with a `models/` tree (paths like `Back/Generator/Part.3m
 
 Renames use a temp file in the same directory, then rename (fail with a clear error if the target already exists).
 
-**STL naming (after `--export-stls`)**
-
-Bambu does not allow custom basenames; exports look like `obj_1_Part Studio 1 (38).step.stl`. The tool renames each file to:
+**STL naming (after `--export-stls`)** — **MCP only.** Bambu does not allow custom basenames; exports look like `obj_1_Part Studio 1 (38).step.stl`. This server renames each file after export to:
 
 `{Brand} - {path with " - "} - {objectLabel} - obj_{n}.stl`
 
@@ -109,11 +125,9 @@ If **multiple** source `.3mf` files share a folder, the basename includes the **
 
 **Processing**
 
-For each `.3mf`: optional rename → `bambu-studio --slice 0 --export-stls` into a **dot-prefixed** temp directory under that part folder (ignored by common scanners) → rename STLs into the part folder (or `stl_output_subpath`) → delete the temp dir.
+For each `.3mf`: optional MCP rename → `bambu-studio --slice 0 --export-stls` into a **dot-prefixed** temp directory under that part folder (ignored by common scanners) → MCP renames STLs into the part folder (or `stl_output_subpath`) → delete the temp dir.
 
-**Response**
-
-JSON with `files_total`, `files_ok`, `files_failed`, and `results[]` per file (`ok`, `error`, `renamed_three_mf_to`, `stl_files_written`, `command_summary`). If no `.3mf` are found, `ok` is still true and a `note` explains that.
+**Response** — **MCP only:** JSON with `files_total`, `files_ok`, `files_failed`, and `results[]` per file (`ok`, `error`, `renamed_three_mf_to`, `stl_files_written`, `command_summary`). If no `.3mf` are found, `ok` is still true and a `note` explains that.
 
 **Consumer sites / `.3d-viewer`**
 

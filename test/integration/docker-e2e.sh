@@ -74,8 +74,8 @@ run_bs "slice + export-3mf (baseline)" \
   --debug 2 --slice 0 --export-3mf /work/out/baseline.3mf /work/sample.3mf
 require_min_bytes "${WORKDIR}/out/baseline.3mf"
 
-run_bs "slice + --orient" \
-  --debug 2 --orient --slice 0 --export-3mf /work/out/with_orient.3mf /work/sample.3mf
+run_bs "slice + --orient 1" \
+  --debug 2 --orient 1 --slice 0 --export-3mf /work/out/with_orient.3mf /work/sample.3mf
 require_min_bytes "${WORKDIR}/out/with_orient.3mf"
 
 run_bs "slice + --arrange 1" \
@@ -87,7 +87,7 @@ run_bs "slice + --scale 0.92" \
 require_min_bytes "${WORKDIR}/out/with_scale.3mf"
 
 run_bs "slice + orient + arrange + scale" \
-  --debug 2 --orient --arrange 1 --scale 0.95 --slice 0 --export-3mf /work/out/combined.3mf /work/sample.3mf
+  --debug 2 --orient 1 --arrange 1 --scale 0.95 --slice 0 --export-3mf /work/out/combined.3mf /work/sample.3mf
 require_min_bytes "${WORKDIR}/out/combined.3mf"
 
 run_bs "slice + --export-settings" \

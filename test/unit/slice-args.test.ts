@@ -27,14 +27,16 @@ describe("buildSliceCliArgs", () => {
         plate_index: 0,
         input_files: ["in/model.3mf"],
         export_3mf: "out/sliced.3mf",
-        orient: true,
+        orient: 1,
         arrange: 1,
         scale: 0.5,
         debug: 2,
       },
       "docker"
     );
-    expect(argv).toContain("--orient");
+    const oi = argv.indexOf("--orient");
+    expect(oi).toBeGreaterThanOrEqual(0);
+    expect(argv[oi + 1]).toBe("1");
     const ar = argv.indexOf("--arrange");
     expect(ar).toBeGreaterThanOrEqual(0);
     expect(argv[ar + 1]).toBe("1");

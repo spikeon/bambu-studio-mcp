@@ -26,7 +26,7 @@ Common OPTIONS:
 - --load-settings "machine.json;process.json" — up to one machine + one process JSON
 - --outputdir dir — export directory
 - --arrange option — 0 disable, 1 enable, other values: auto
-- --orient — auto-orient models
+- --orient option — 0 disable, 1 enable, other values: auto
 - --scale factor — float scale
 - --export-3mf file.3mf — write sliced project 3MF
 - --export-settings settings.json — dump settings
@@ -94,7 +94,10 @@ const layoutSchemaFields = {
     .union([z.literal(0), z.literal(1), z.number().int()])
     .optional()
     .describe("0 off, 1 on, any other int = auto (upstream behavior)"),
-  orient: z.boolean().optional().describe("Auto-orient models before slicing"),
+  orient: z
+    .union([z.literal(0), z.literal(1), z.number().int()])
+    .optional()
+    .describe("0 off, 1 on, any other int = auto (upstream --orient)"),
   scale: z.number().optional().describe("Uniform scale factor before slicing"),
 };
 

@@ -61,7 +61,7 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 | `bambu_studio_help` | Runs `bambu-studio --help` in Docker or natively |
 | `bambu_studio_model_info` | Runs `--info` on workspace-relative models |
 | `bambu_studio_slice` | Minimal slice: `--slice`, optional `--export-3mf`, `--debug`, `--uptodate`, `setting_overrides` |
-| `bambu_studio_slice_layout` | Slice with `--orient`, `--arrange`, `--scale` |
+| `bambu_studio_slice_layout` | Slice with `--orient` / `--arrange` (0/1/auto) and `--scale` |
 | `bambu_studio_slice_load_presets` | Slice with `--load-settings` and optional `--load-filaments` |
 | `bambu_studio_slice_outputs` | Slice with `--outputdir`, `--export-settings`, `--export-slicedata`, `--load-slicedata` |
 | `bambu_studio_slice_full` | One call with every slice-related option (use when combining categories) |

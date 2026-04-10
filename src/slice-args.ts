@@ -29,7 +29,8 @@ export function appendSettingOverrides(
 export interface SliceCliInput {
   debug?: number;
   arrange?: number;
-  orient?: boolean;
+  /** 0 off, 1 on, other int = auto (matches upstream `--orient` CLI). */
+  orient?: number;
   scale?: number;
   output_dir?: string;
   load_settings_files?: string[];
@@ -78,8 +79,8 @@ export function buildSliceCliArgs(
   if (input.arrange !== undefined) {
     cli.push("--arrange", String(input.arrange));
   }
-  if (input.orient) {
-    cli.push("--orient");
+  if (input.orient !== undefined) {
+    cli.push("--orient", String(input.orient));
   }
   if (input.scale !== undefined) {
     cli.push("--scale", String(input.scale));

@@ -69,6 +69,7 @@ Native mode on Windows defaults to `C:\Program Files\Bambu Studio\bambu-studio.e
 | `bambu_studio_help` | Runs `bambu-studio --help` in Docker or natively |
 | `bambu_studio_model_info` | Runs `--info` on workspace-relative models |
 | `bambu_studio_extract_models_from_3mf` | Workflow: **3MF → STL** (one merged mesh or one STL per object in a folder); schema uses a **union** so MCP clients see full `mode`-specific fields |
+| `bambu_studio_extract_stls_beside_3mf` | Workflow: per-object STLs **next to the .3mf** with `{3mfStem} - {exportStem}.stl`; uses a temp folder then moves + deletes it |
 | `bambu_studio_quick_slice` | Workflow: slice → one output **3MF** |
 | `bambu_studio_slice_with_layout` | Workflow: orient / arrange / scale / rotate / … then slice → **3MF** |
 | `bambu_studio_slice_with_presets` | Workflow: `--load-settings` / `--load-filaments` then slice → **3MF** |
@@ -91,6 +92,7 @@ The upstream [`bambu-studio`](https://github.com/bambulab/BambuStudio) binary ex
 - **`bambu_studio_health`** — Checks how this MCP is configured (Docker vs native, image, `--help` exit code).
 - **MCP input schemas** — Zod/JSON Schema for tools (including union shapes so clients list all fields for `bambu_studio_extract_models_from_3mf`).
 - **`stl_export_filename_prefix` / `stl_export_filename_suffix`** — After `--export-stl` / `--export-stls`, rename each **new** `.stl` (not present before the run) to `prefix + originalStem + suffix + .stl`. The Bambu binary does not choose custom names; this is post-processing in the MCP.
+- **`bambu_studio_extract_stls_beside_3mf`** — Exports to a dot-prefixed temp directory under the `.3mf`’s folder, applies the `{3mfStem} - ` prefix via the same rename logic, **moves** STLs beside the `.3mf`, then **removes** the temp directory (or leaves it if moving fails).
 
 ## Development (from source)
 

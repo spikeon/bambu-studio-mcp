@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
+import { extractPrefixedStlsBesideThreeMf } from "./extract-stl-beside-3mf.js";
 import { runSliceFromInput } from "./slice-runner.js";
 import {
   extractModelsFrom3mfToCliInput,
@@ -41,7 +42,7 @@ Settings priority (high to low): CLI --key=value, --load-settings/--load-filamen
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.
 
-Slice workflows: bambu_studio_extract_models_from_3mf; bambu_studio_quick_slice; bambu_studio_slice_with_layout; bambu_studio_slice_with_presets; bambu_studio_slice_write_outputs; bambu_studio_slice_all_cli_options.`;
+Slice workflows: bambu_studio_extract_models_from_3mf; bambu_studio_extract_stls_beside_3mf (per-object STLs beside the .3mf, {name} - prefix); bambu_studio_quick_slice; bambu_studio_slice_with_layout; bambu_studio_slice_with_presets; bambu_studio_slice_write_outputs; bambu_studio_slice_all_cli_options.`;
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -302,7 +303,7 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Workflows: bambu_studio_extract_models_from_3mf (single 3MF → STL) · bambu_studio_quick_slice (→ 3MF) · layout / presets / write_outputs / all_cli_options. For upstream flags, call bambu_studio_help. Use Linux-style absolute paths for workspace_path (see below).
+Workflows: bambu_studio_extract_models_from_3mf (single 3MF → STL) · bambu_studio_extract_stls_beside_3mf (per-object STLs next to the .3mf with {3mfStem} - prefix) · bambu_studio_quick_slice (→ 3MF) · layout / presets / write_outputs / all_cli_options. For upstream flags, call bambu_studio_help. Use Linux-style absolute paths for workspace_path (see below).
 
 IMPORTANT — workspace_path format:
 This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
@@ -375,6 +376,35 @@ server.registerTool(
   async (args) => {
     const { workspace_path, ...rest } = args;
     return runSliceFromInput(workspace_path, extractModelsFrom3mfToCliInput(rest));
+  }
+);
+
+const extractStlsBesideThreeMfSchema = z.object({
+  workspace_path: workspaceField,
+  three_mf_file: threeMfFileField,
+  plate_index: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe("Plate index for --slice (default 0 = all plates)"),
+  debug: z.number().int().min(0).max(5).optional(),
+});
+
+server.registerTool(
+  "bambu_studio_extract_stls_beside_3mf",
+  {
+    description:
+      "MCP workflow: export one STL per mesh object from a .3mf using --export-stls into a dot-prefixed temp folder, rename each to `{3mfBasenameWithoutExt} - {originalStlStem}.stl`, move them into the same folder as the .3mf, then delete the temp folder. If moving fails, the temp folder is left in place for recovery. Object labels come from Bambu export names (often obj_N_…), not arbitrary letters a/b/c.",
+    inputSchema: extractStlsBesideThreeMfSchema,
+  },
+  async (args) => {
+    return extractPrefixedStlsBesideThreeMf(
+      args.workspace_path,
+      args.three_mf_file,
+      args.plate_index ?? 0,
+      args.debug
+    );
   }
 );
 

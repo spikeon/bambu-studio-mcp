@@ -20,6 +20,13 @@ Internal context for assistants working in this repository. User-facing document
 | Workflows | `src/workflow-slice.ts` — maps high-level tools (`quick_slice`, layout, presets, extract, full) to `SliceCliInput`. |
 | Actual slice run | `src/slice-runner.ts` — `runSliceFromInput` ties args + runner. |
 | STL rename (MCP) | `src/stl-rename.ts` — optional `stl_export_filename_prefix` / `stl_export_filename_suffix` after `--export-stl` / `--export-stls`. |
+| Beside-3MF extract | `src/extract-stl-beside-3mf.ts` — tool `bambu_studio_extract_stls_beside_3mf` (temp export → move → cleanup). |
+
+## Cursor skill
+
+| Path | Role |
+|------|------|
+| `.cursor/skills/bambu-prefixed-stl-extract/SKILL.md` | When to use `bambu_studio_extract_stls_beside_3mf` and path rules. |
 
 ## Environment variables (quick reference)
 

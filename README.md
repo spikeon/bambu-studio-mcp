@@ -79,9 +79,13 @@ npm run ci       # build + unit tests + E2E
 
 CI (GitHub Actions) builds the image and runs the same E2E script as `test:e2e`.
 
+E2E downloads a small upstream 3MF (default: `auto_pa_line_single.3mf` at `BAMBU_STUDIO_FIXTURE_REF`). Override with `BAMBU_E2E_FIXTURE_PATH` (repo-relative path under `BambuStudio`, e.g. `resources/calib/...`) if needed.
+
 ## Docker image notes
 
 The [`Dockerfile`](Dockerfile) uses **Fedora** as the runtime base so shared libraries match the **Fedora** AppImage from upstream releases. The image downloads a pinned AppImage at build time (`BAMBU_APPIMAGE_URL` build-arg); override it if you need another version.
+
+The [`docker/entrypoint.sh`](docker/entrypoint.sh) defaults to **software OpenGL** (`LIBGL_ALWAYS_SOFTWARE`, `llvmpipe`) so headless slicing is stable in CI; unset or override those variables if you run the image with a real GPU.
 
 ## License
 

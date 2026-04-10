@@ -1,0 +1,5 @@
+node_modules
+dist
+.git
+*.md
+mcp-config.example.json

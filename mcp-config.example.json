@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "bambu-studio": {
+      "command": "node",
+      "args": ["<ABSOLUTE_PATH_TO_THIS_REPO>/dist/index.js"],
+      "env": {
+        "BAMBU_STUDIO_EXEC_MODE": "docker",
+        "BAMBU_STUDIO_IMAGE": "bambu-studio-mcp:latest"
+      }
+    }
+  }
+}

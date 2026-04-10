@@ -6,7 +6,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "bash test/integration/docker-e2e.sh",
+    "ci": "npm run build && npm run test && npm run test:e2e"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^25.5.2",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   }
 }

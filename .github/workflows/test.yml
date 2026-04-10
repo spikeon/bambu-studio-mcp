@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-and-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build Bambu Studio Docker image
+        run: docker build -t bambu-studio-mcp:ci .
+
+      - name: E2E — CLI slice, orient, arrange, scale, exports
+        env:
+          BAMBU_E2E_IMAGE: bambu-studio-mcp:ci
+          BAMBU_E2E_DOCKER_TIMEOUT: "900"
+        run: bash test/integration/docker-e2e.sh

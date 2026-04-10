@@ -120,8 +120,11 @@ export async function runBambuStudio(
 }
 
 /** Map each relative file argument to host or /work/... */
-export function mapFileArgs(workspaceRoot: string, relativePaths: string[]): string[] {
-  const mode = detectExecMode();
+export function mapFileArgs(
+  workspaceRoot: string,
+  relativePaths: string[],
+  mode: ExecMode = detectExecMode()
+): string[] {
   return relativePaths.map((rel) => {
     resolveHostPath(workspaceRoot, rel);
     return mode === "docker" ? toContainerPath(rel) : rel;
@@ -129,8 +132,11 @@ export function mapFileArgs(workspaceRoot: string, relativePaths: string[]): str
 }
 
 /** Semicolon pattern for --load-filaments (empty slots stay empty). */
-export function mapSemicolonPaths(workspaceRoot: string, pattern: string): string {
-  const mode = detectExecMode();
+export function mapSemicolonPaths(
+  workspaceRoot: string,
+  pattern: string,
+  mode: ExecMode = detectExecMode()
+): string {
   return pattern.split(";").map((segment) => {
     const t = segment.trim();
     if (t === "") {

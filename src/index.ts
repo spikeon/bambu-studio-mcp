@@ -4,12 +4,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
-import { assertRelativeWorkspacePath, resolveHostPath } from "./paths.js";
+import { buildSliceCliArgs } from "./slice-args.js";
 import {
   detectExecMode,
   formatToolOutput,
   mapFileArgs,
-  mapSemicolonPaths,
   runBambuStudio,
 } from "./runner.js";
 
@@ -40,26 +39,6 @@ Common OPTIONS:
 Settings priority (high to low): CLI --key=value, --load-settings/--load-filaments, values inside 3MF.
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.`;
-
-function appendSettingOverrides(args: string[], o?: Record<string, string | number | boolean>) {
-  if (!o) {
-    return;
-  }
-  for (const [rawKey, v] of Object.entries(o)) {
-    if (v === false || v === undefined || v === null) {
-      continue;
-    }
-    let key = String(rawKey).trim();
-    if (key.startsWith("--")) {
-      key = key.slice(2);
-    }
-    if (v === true) {
-      args.push(`--${key}`);
-    } else {
-      args.push(`--${key}=${String(v)}`);
-    }
-  }
-}
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -191,65 +170,27 @@ server.registerTool(
   },
   async (args) => {
     const ws = path.resolve(args.workspace_path);
-    const cli: string[] = [];
-
-    appendSettingOverrides(cli, args.setting_overrides);
-    cli.push("--debug", String(args.debug ?? 2));
-
-    if (args.load_settings_files?.length) {
-      for (const f of args.load_settings_files) {
-        assertRelativeWorkspacePath(f);
-        resolveHostPath(ws, f);
-      }
-      const joined = mapSemicolonPaths(ws, args.load_settings_files.join(";"));
-      cli.push("--load-settings", joined);
-    }
-
-    if (args.load_filaments_semicolon !== undefined) {
-      cli.push("--load-filaments", mapSemicolonPaths(ws, args.load_filaments_semicolon));
-    }
-
-    if (args.output_dir) {
-      assertRelativeWorkspacePath(args.output_dir);
-      resolveHostPath(ws, args.output_dir);
-      cli.push("--outputdir", mapFileArgs(ws, [args.output_dir])[0]!);
-    }
-
-    if (args.arrange !== undefined) {
-      cli.push("--arrange", String(args.arrange));
-    }
-    if (args.orient) {
-      cli.push("--orient");
-    }
-    if (args.scale !== undefined) {
-      cli.push("--scale", String(args.scale));
-    }
-    if (args.export_3mf) {
-      assertRelativeWorkspacePath(args.export_3mf);
-      resolveHostPath(ws, args.export_3mf);
-      cli.push("--export-3mf", mapFileArgs(ws, [args.export_3mf])[0]!);
-    }
-    if (args.export_settings) {
-      assertRelativeWorkspacePath(args.export_settings);
-      resolveHostPath(ws, args.export_settings);
-      cli.push("--export-settings", mapFileArgs(ws, [args.export_settings])[0]!);
-    }
-    if (args.export_slicedata) {
-      assertRelativeWorkspacePath(args.export_slicedata);
-      resolveHostPath(ws, args.export_slicedata);
-      cli.push("--export-slicedata", mapFileArgs(ws, [args.export_slicedata])[0]!);
-    }
-    if (args.load_slicedata) {
-      assertRelativeWorkspacePath(args.load_slicedata);
-      resolveHostPath(ws, args.load_slicedata);
-      cli.push("--load-slicedata", mapFileArgs(ws, [args.load_slicedata])[0]!);
-    }
-    if (args.uptodate) {
-      cli.push("--uptodate");
-    }
-
-    cli.push("--slice", String(args.plate_index));
-    cli.push(...mapFileArgs(ws, args.input_files));
+    const cli = buildSliceCliArgs(
+      ws,
+      {
+        debug: args.debug,
+        arrange: args.arrange,
+        orient: args.orient,
+        scale: args.scale,
+        output_dir: args.output_dir,
+        load_settings_files: args.load_settings_files,
+        load_filaments_semicolon: args.load_filaments_semicolon,
+        export_3mf: args.export_3mf,
+        export_settings: args.export_settings,
+        export_slicedata: args.export_slicedata,
+        load_slicedata: args.load_slicedata,
+        uptodate: args.uptodate,
+        setting_overrides: args.setting_overrides,
+        plate_index: args.plate_index,
+        input_files: args.input_files,
+      },
+      detectExecMode()
+    );
 
     const result = await runBambuStudio(ws, cli);
     return {

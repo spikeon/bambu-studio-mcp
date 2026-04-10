@@ -19,6 +19,7 @@ Internal context for assistants working in this repository. User-facing document
 | Slice argv | `src/slice-args.ts` — `SliceCliInput`, `sliceCliInputToArgs` (large surface matching `--help`). |
 | Workflows | `src/workflow-slice.ts` — maps high-level tools (`quick_slice`, layout, presets, extract, full) to `SliceCliInput`. |
 | Actual slice run | `src/slice-runner.ts` — `runSliceFromInput` ties args + runner. |
+| STL rename (MCP) | `src/stl-rename.ts` — optional `stl_export_filename_prefix` / `stl_export_filename_suffix` after `--export-stl` / `--export-stls`. |
 
 ## Environment variables (quick reference)
 
@@ -35,7 +36,7 @@ Internal context for assistants working in this repository. User-facing document
 
 ## MCP-only vs Bambu CLI
 
-- Anything that is **only** in this repo (Docker wiring, `--outputdir`/`--export-3mf` path normalization in `slice-args.ts`, health tool, static CLI reference markdown, Zod unions for extract tool, workflow tool **names**) is documented under **README → MCP-only behavior**. Do not attribute those to Bambu Lab’s wiki.
+- Anything that is **only** in this repo (Docker wiring, `--outputdir`/`--export-3mf` path normalization in `slice-args.ts`, **`stl-rename.ts`** post-export STL renames, health tool, static CLI reference markdown, Zod unions for extract tool, workflow tool **names**) is documented under **README → MCP-only behavior**. Do not attribute those to Bambu Lab’s wiki.
 - **`cliPathUnderOutputDir`** in `slice-args.ts` exists to avoid upstream path doubling when both `--outputdir` and export paths are set; treat changes there carefully.
 
 ## Tests

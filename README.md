@@ -90,6 +90,7 @@ The upstream [`bambu-studio`](https://github.com/bambulab/BambuStudio) binary ex
 - **`bambu_studio_cli_reference`** — Static markdown summary, not the binary.
 - **`bambu_studio_health`** — Checks how this MCP is configured (Docker vs native, image, `--help` exit code).
 - **MCP input schemas** — Zod/JSON Schema for tools (including union shapes so clients list all fields for `bambu_studio_extract_models_from_3mf`).
+- **`stl_export_filename_prefix` / `stl_export_filename_suffix`** — After `--export-stl` / `--export-stls`, rename each **new** `.stl` (not present before the run) to `prefix + originalStem + suffix + .stl`. The Bambu binary does not choose custom names; this is post-processing in the MCP.
 
 ## Development (from source)
 

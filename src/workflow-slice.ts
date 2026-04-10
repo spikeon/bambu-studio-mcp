@@ -80,6 +80,8 @@ export function extractModelsFrom3mfToCliInput(
         plate_index: number;
         output_dir?: string;
         debug?: number;
+        stl_export_filename_prefix?: string;
+        stl_export_filename_suffix?: string;
       }
     | {
         mode: "per_object_stls";
@@ -88,14 +90,21 @@ export function extractModelsFrom3mfToCliInput(
         plate_index: number;
         output_dir?: string;
         debug?: number;
+        stl_export_filename_prefix?: string;
+        stl_export_filename_suffix?: string;
       }
 ): SliceCliInput {
   const input_files = [args.three_mf_file];
+  const fmt = {
+    stl_export_filename_prefix: args.stl_export_filename_prefix,
+    stl_export_filename_suffix: args.stl_export_filename_suffix,
+  };
   const base: SliceCliInput = {
     plate_index: args.plate_index,
     input_files,
     output_dir: args.output_dir,
     debug: args.debug,
+    ...fmt,
   };
   if (args.mode === "merged_single_stl") {
     return { ...base, export_stl: true };
@@ -119,6 +128,8 @@ export function pipelineOutputsSliceToCliInput(args: {
   debug?: number;
   setting_overrides?: Record<string, string | number | boolean>;
   uptodate?: boolean;
+  stl_export_filename_prefix?: string;
+  stl_export_filename_suffix?: string;
 }): SliceCliInput {
   return {
     plate_index: args.plate_index,
@@ -135,5 +146,7 @@ export function pipelineOutputsSliceToCliInput(args: {
     debug: args.debug,
     setting_overrides: args.setting_overrides,
     uptodate: args.uptodate,
+    stl_export_filename_prefix: args.stl_export_filename_prefix,
+    stl_export_filename_suffix: args.stl_export_filename_suffix,
   };
 }

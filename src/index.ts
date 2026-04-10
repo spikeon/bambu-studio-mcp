@@ -92,6 +92,16 @@ const exportMediaSchemaFields = {
     .min(1)
     .optional()
     .describe("Relative directory for --export-stls (one STL per object); create the dir if needed"),
+  stl_export_filename_prefix: z
+    .string()
+    .optional()
+    .describe(
+      "MCP-only: after export, rename each new STL to prefix + originalStem + suffix + .stl (requires export_stl and/or export_stls; Bambu CLI does not set mesh basenames)."
+    ),
+  stl_export_filename_suffix: z
+    .string()
+    .optional()
+    .describe("MCP-only: suffix before .stl; see stl_export_filename_prefix."),
   camera_view: z
     .number()
     .int()
@@ -131,6 +141,8 @@ const extractModelsFrom3mfSchema = z.union([
       .optional()
       .describe("Optional --outputdir; merged STL is written under this folder when set"),
     debug: z.number().int().min(0).max(5).optional(),
+    stl_export_filename_prefix: exportMediaSchemaFields.stl_export_filename_prefix,
+    stl_export_filename_suffix: exportMediaSchemaFields.stl_export_filename_suffix,
   }),
   z.object({
     workspace_path: workspaceField,
@@ -147,6 +159,8 @@ const extractModelsFrom3mfSchema = z.union([
       .optional()
       .describe("Optional --outputdir; if set, stls_directory is usually under this folder"),
     debug: z.number().int().min(0).max(5).optional(),
+    stl_export_filename_prefix: exportMediaSchemaFields.stl_export_filename_prefix,
+    stl_export_filename_suffix: exportMediaSchemaFields.stl_export_filename_suffix,
   }),
 ]);
 
@@ -355,7 +369,7 @@ server.registerTool(
   "bambu_studio_extract_models_from_3mf",
   {
     description:
-      "Workflow: pull mesh geometry out of a .3mf and write STL—either one merged file (--export-stl) or one STL per object in a folder (--export-stls). Uses the same plate index as slicing (0 = all plates). Prefer this over generic slice tools when you only need STLs.",
+      "Workflow: pull mesh geometry out of a .3mf and write STL—either one merged file (--export-stl) or one STL per object in a folder (--export-stls). Optional stl_export_filename_prefix/suffix renames each new STL after export (MCP-only). Uses the same plate index as slicing (0 = all plates). Prefer this over generic slice tools when you only need STLs.",
     inputSchema: extractModelsFrom3mfSchema,
   },
   async (args) => {
@@ -407,7 +421,7 @@ server.registerTool(
   "bambu_studio_slice_write_outputs",
   {
     description:
-      "Workflow: slice and write auxiliary files—output directory, exported settings JSON, slicedata cache, load cached slicedata, merged STL, per-object STLs, plate PNG, camera view. Optional sliced 3MF. If you set output_dir, keep export_3mf/export_stls paths under it so paths do not double.",
+      "Workflow: slice and write auxiliary files—output directory, exported settings JSON, slicedata cache, load cached slicedata, merged STL, per-object STLs, plate PNG, camera view. Optional sliced 3MF. Optional stl_export_filename_prefix/suffix renames new STL basenames after export (MCP-only). If you set output_dir, keep export_3mf/export_stls paths under it so paths do not double.",
     inputSchema: pipelineWorkflowSchema,
   },
   async (args) => {

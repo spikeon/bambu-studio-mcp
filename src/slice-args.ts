@@ -136,6 +136,14 @@ export interface SliceCliInput {
   /** Directory for per-object STLs (`--export-stls`). */
   export_stls?: string;
 
+  /**
+   * MCP-only: after a successful export, rename each **new** `.stl` (not present before the run)
+   * to `prefix + originalStem + suffix + ".stl"`. The CLI does not support custom mesh filenames.
+   */
+  stl_export_filename_prefix?: string;
+  /** MCP-only: see `stl_export_filename_prefix`. */
+  stl_export_filename_suffix?: string;
+
   load_slicedata?: string;
   load_defaultfila?: number;
 

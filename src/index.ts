@@ -14,10 +14,6 @@ import {
   quickSliceToCliInput,
 } from "./workflow-slice.js";
 import {
-  DEFAULT_SKIP_DIR_NAMES,
-  standardizeCatalogMeshes,
-} from "./catalog-standardize.js";
-import {
   detectExecMode,
   formatToolOutput,
   mapFileArgs,
@@ -45,7 +41,7 @@ Settings priority (high to low): CLI --key=value, --load-settings/--load-filamen
 
 This MCP maps workspace-relative paths to /work/... inside Docker (default), or uses them as-is on the host in native mode.
 
-Slice workflows: bambu_studio_standardize_catalog_meshes (batch brand/STL naming); bambu_studio_extract_models_from_3mf; bambu_studio_quick_slice; bambu_studio_slice_with_layout; bambu_studio_slice_with_presets; bambu_studio_slice_write_outputs; bambu_studio_slice_all_cli_options.`;
+Slice workflows: bambu_studio_extract_models_from_3mf; bambu_studio_quick_slice; bambu_studio_slice_with_layout; bambu_studio_slice_with_presets; bambu_studio_slice_write_outputs; bambu_studio_slice_all_cli_options.`;
 
 async function withTempWorkspace<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bambu-mcp-"));
@@ -153,34 +149,6 @@ const extractModelsFrom3mfSchema = z.union([
     debug: z.number().int().min(0).max(5).optional(),
   }),
 ]);
-
-const standardizeCatalogMeshesSchema = z.object({
-  models_root: workspaceField.describe(
-    "Absolute path to the catalog `models/` tree (same path rules as workspace_path)."
-  ),
-  brand: z.string().min(1).describe("Brand prefix (e.g. site publicName: ExoGuitar, ExoBass)."),
-  rename_three_mf: z
-    .boolean()
-    .optional()
-    .describe("Rename each lone .3mf to {Brand} - {path}.3mf (or add stem if multiple per folder). Default true."),
-  dedupe_realpath: z
-    .boolean()
-    .optional()
-    .describe("Skip a file if its realpath was already processed. Default true."),
-  skip_dir_names: z
-    .array(z.string().min(1))
-    .optional()
-    .describe(
-      "Extra directory names to skip when walking (always skips .git, node_modules, .3d-viewer, .print-profiles, print-profiles, and .bambu-stl-export-*)."
-    ),
-  stl_output_subpath: z
-    .string()
-    .optional()
-    .describe(
-      "If set, place renamed STLs in this subfolder under each part directory instead of next to the .3mf."
-    ),
-  debug: z.number().int().min(0).max(5).optional(),
-});
 
 const layoutSchemaFields = {
   arrange: z
@@ -320,7 +288,7 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Workflows: bambu_studio_standardize_catalog_meshes (batch: brand + rename .3mf + export/rename STLs) · bambu_studio_extract_models_from_3mf (single 3MF → STL) · bambu_studio_quick_slice (→ 3MF) · layout / presets / write_outputs / all_cli_options. For upstream flags, call bambu_studio_help. Use Linux-style absolute paths for models_root / workspace_path (see below).
+Workflows: bambu_studio_extract_models_from_3mf (single 3MF → STL) · bambu_studio_quick_slice (→ 3MF) · layout / presets / write_outputs / all_cli_options. For upstream flags, call bambu_studio_help. Use Linux-style absolute paths for workspace_path (see below).
 
 IMPORTANT — workspace_path format:
 This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
@@ -393,37 +361,6 @@ server.registerTool(
   async (args) => {
     const { workspace_path, ...rest } = args;
     return runSliceFromInput(workspace_path, extractModelsFrom3mfToCliInput(rest));
-  }
-);
-
-server.registerTool(
-  "bambu_studio_standardize_catalog_meshes",
-  {
-    description:
-      "Batch workflow for catalog repos: walk models_root for .3mf (skips .git, node_modules, .3d-viewer, print-profile dirs), optionally rename each .3mf to {Brand} - {path}.3mf, run --slice 0 + --export-stls into a dot-prefixed temp dir, then rename STLs to {Brand} - {path} - {label} - obj_{n}.stl. Returns JSON with per-file results. models_root uses the same absolute Linux-style paths as workspace_path.",
-    inputSchema: standardizeCatalogMeshesSchema,
-  },
-  async (args) => {
-    const skip = new Set<string>([...DEFAULT_SKIP_DIR_NAMES]);
-    if (args.skip_dir_names) {
-      for (const s of args.skip_dir_names) {
-        skip.add(s);
-      }
-    }
-    const summary = await standardizeCatalogMeshes({
-      modelsRoot: args.models_root,
-      brand: args.brand,
-      renameThreeMf: args.rename_three_mf !== false,
-      dedupeRealpath: args.dedupe_realpath !== false,
-      skipDirNames: skip,
-      stlOutputSubpath: args.stl_output_subpath,
-      debug: args.debug,
-    });
-    const text = JSON.stringify(summary, null, 2);
-    return {
-      content: [{ type: "text", text }],
-      isError: !summary.ok,
-    };
   }
 );
 

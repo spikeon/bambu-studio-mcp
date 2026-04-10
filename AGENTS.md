@@ -6,7 +6,7 @@ Internal context for assistants working in this repository. User-facing document
 
 - A **Node.js** [Model Context Protocol](https://modelcontextprotocol.io/) server that invokes the **Bambu Studio** command-line binary (`bambu-studio`).
 - **Default execution:** `docker run` with the workspace bind-mounted as `/work`, using image `ghcr.io/spikeon/bambu-studio-mcp:latest` (Fedora + Bambu AppImage). Alternative: **`native`** mode runs a host-installed `bambu-studio` / `bambu-studio.exe`.
-- The MCP does **not** reimplement slicing; it builds argv, maps paths, spawns Docker or the native binary, and returns stdout/stderr/exit code (plus JSON for catalog batch tooling).
+- The MCP does **not** reimplement slicing; it builds argv, maps paths, spawns Docker or the native binary, and returns stdout/stderr/exit code.
 
 ## Stack and layout
 
@@ -19,7 +19,6 @@ Internal context for assistants working in this repository. User-facing document
 | Slice argv | `src/slice-args.ts` — `SliceCliInput`, `sliceCliInputToArgs` (large surface matching `--help`). |
 | Workflows | `src/workflow-slice.ts` — maps high-level tools (`quick_slice`, layout, presets, extract, full) to `SliceCliInput`. |
 | Actual slice run | `src/slice-runner.ts` — `runSliceFromInput` ties args + runner. |
-| Catalog batch | `src/catalog-standardize.ts` — **`bambu_studio_standardize_catalog_meshes`** only; walks trees, renames `.3mf`/`.stl`, temp dirs; not upstream CLI behavior. |
 
 ## Environment variables (quick reference)
 
@@ -36,12 +35,12 @@ Internal context for assistants working in this repository. User-facing document
 
 ## MCP-only vs Bambu CLI
 
-- Anything that is **only** in this repo (batch catalog renames, Docker wiring, `--outputdir`/`--export-3mf` path normalization in `slice-args.ts`, health tool, static CLI reference markdown, Zod unions for extract tool, workflow tool **names**) is documented under **README → MCP-only behavior**. Do not attribute those to Bambu Lab’s wiki.
+- Anything that is **only** in this repo (Docker wiring, `--outputdir`/`--export-3mf` path normalization in `slice-args.ts`, health tool, static CLI reference markdown, Zod unions for extract tool, workflow tool **names**) is documented under **README → MCP-only behavior**. Do not attribute those to Bambu Lab’s wiki.
 - **`cliPathUnderOutputDir`** in `slice-args.ts` exists to avoid upstream path doubling when both `--outputdir` and export paths are set; treat changes there carefully.
 
 ## Tests
 
-- **Unit:** `npm run test` — Vitest, `test/unit/*.test.ts` (paths, slice args, workflows, catalog standardize).
+- **Unit:** `npm run test` — Vitest, `test/unit/*.test.ts` (paths, slice args, workflows).
 - **E2E:** `npm run test:e2e` — Docker-based tests in `test/e2e/`; needs Docker and `BAMBU_E2E_IMAGE` / fixture env as in README.
 - **CI:** `npm run ci` — build + unit + E2E; workflow in `.github/workflows/test.yml` builds slicer image and publishes GHCR on `main` when tests pass.
 

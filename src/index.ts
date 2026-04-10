@@ -157,7 +157,7 @@ const server = new McpServer(
     version: "1.0.0",
   },
   {
-    instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default execution uses Docker image bambu-studio-mcp:latest (build from this repo). Reference: ${WIKI_CLI_URL}
+    instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
 Slice tools: bambu_studio_slice (minimal), bambu_studio_slice_layout (orient/arrange/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (export paths and cache dirs), bambu_studio_slice_full (all options in one call).`,
   }
@@ -314,7 +314,9 @@ server.registerTool(
     const lines = [`exec_mode: ${mode}`, `platform: ${process.platform}`];
     if (mode === "docker") {
       lines.push(`docker_bin: ${process.env.BAMBU_STUDIO_DOCKER_BIN?.trim() || "docker"}`);
-      lines.push(`image: ${process.env.BAMBU_STUDIO_IMAGE?.trim() || "bambu-studio-mcp:latest"}`);
+      lines.push(
+        `image: ${process.env.BAMBU_STUDIO_IMAGE?.trim() || "ghcr.io/spikeon/bambu-studio-mcp:latest"}`
+      );
     } else {
       lines.push(
         `native_bin: ${process.env.BAMBU_STUDIO_BIN?.trim() || "(default path for OS)"}`

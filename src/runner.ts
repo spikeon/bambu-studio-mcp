@@ -18,7 +18,9 @@ function getDockerBin(): string {
 }
 
 function getDockerImage(): string {
-  return process.env.BAMBU_STUDIO_IMAGE?.trim() || "bambu-studio-mcp:latest";
+  return (
+    process.env.BAMBU_STUDIO_IMAGE?.trim() || "ghcr.io/spikeon/bambu-studio-mcp:latest"
+  );
 }
 
 function getNativeBin(): string {

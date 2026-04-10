@@ -1,12 +1,15 @@
 {
   "mcpServers": {
     "bambu-studio": {
-      "command": "node",
-      "args": ["<ABSOLUTE_PATH_TO_THIS_REPO>/dist/index.js"],
-      "env": {
-        "BAMBU_STUDIO_EXEC_MODE": "docker",
-        "BAMBU_STUDIO_IMAGE": "bambu-studio-mcp:latest"
-      }
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "ghcr.io/spikeon/bambu-studio-mcp:mcp"
+      ]
     }
   }
 }

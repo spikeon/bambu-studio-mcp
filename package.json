@@ -15,7 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "MCP server wrapping Bambu Studio CLI (slice, --info, --help). Default: Docker image bambu-studio-mcp:latest.",
+  "description": "MCP server wrapping Bambu Studio CLI (slice, --info, --help). Default slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest.",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"

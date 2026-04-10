@@ -56,7 +56,11 @@ const workspaceField = z
   .string()
   .min(1)
   .describe(
-    "Absolute path to a directory on the host. All model/settings paths must be relative to this directory. It is bind-mounted to /work in Docker."
+    "Absolute path to a directory that holds your model/settings files. All input_files and output paths are relative to this directory. " +
+    "PATH FORMAT: use a Linux-style absolute path regardless of your OS. " +
+    "On Windows with Docker Desktop supply the drive as the first path segment: e.g. /d/Users/me/prints for D:\\Users\\me\\prints. " +
+    "Do NOT use Windows backslash paths (D:\\...) — the MCP server runs on Linux inside Docker and path.resolve() will mangle them. " +
+    "The directory is bind-mounted to /work inside the slicer container."
   );
 
 const inputFilesField = z
@@ -124,7 +128,7 @@ const outputSchemaFields = {
     .string()
     .min(1)
     .optional()
-    .describe("Relative directory for --export-slicedata"),
+    .describe("Relative directory for --export-slicedata. The directory must already exist; Bambu Studio creates numbered subdirs inside it but cannot create the top-level dir on Windows-mounted volumes."),
   load_slicedata: z
     .string()
     .min(1)
@@ -159,7 +163,16 @@ const server = new McpServer(
   {
     instructions: `Wraps Bambu Studio CLI for slicing and model inspection. Default Docker slicer image: ghcr.io/spikeon/bambu-studio-mcp:latest (override with BAMBU_STUDIO_IMAGE). Reference: ${WIKI_CLI_URL}
 
-Slice tools: bambu_studio_slice (minimal), bambu_studio_slice_layout (orient/arrange/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (export paths and cache dirs), bambu_studio_slice_full (all options in one call).`,
+Slice tools: bambu_studio_slice (minimal), bambu_studio_slice_layout (orient/arrange/scale), bambu_studio_slice_load_presets (machine/process/filament JSON), bambu_studio_slice_outputs (export paths and cache dirs), bambu_studio_slice_full (all options in one call).
+
+IMPORTANT — workspace_path format:
+This MCP server process runs on Linux (inside a Docker container). Always supply workspace_path as a Linux-style absolute path:
+  • Windows (Docker Desktop): use /d/Users/me/prints for D:\\Users\\me\\prints
+  • Linux/macOS: use the path as-is, e.g. /home/me/prints
+Never use Windows backslash paths — path.resolve() on Linux will mangle them.
+
+IMPORTANT — export_slicedata:
+The directory passed to export_slicedata must already exist on disk before the slice runs. Bambu Studio creates a numbered subdirectory (e.g. slicedata/1/) inside it but cannot create the top-level directory itself when the workspace is a Windows-mounted Docker volume.`,
   }
 );
 
